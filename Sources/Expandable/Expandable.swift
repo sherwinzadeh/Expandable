@@ -12,7 +12,20 @@ public struct Expandable<Contents: View, ButtonLabel: View>: View {
     /// Width of the gradient placed on the leading edge of the expand button.
     private let gradientWidth: Double = 60
 
-    @State private var isExpanded: Bool = false
+    @Binding private var isExpandedBinding: Bool
+    @State private var isExpandedState: Bool = false
+    private let usesBinding: Bool
+
+    private var isExpanded: Bool {
+        get { usesBinding ? isExpandedBinding : isExpandedState }
+        nonmutating set {
+            if usesBinding {
+                isExpandedBinding = newValue
+            } else {
+                isExpandedState = newValue
+            }
+        }
+    }
 
     /// Measured height of the contents when truncated.
     @State private var truncatedHeight: CGFloat = 0
@@ -24,7 +37,18 @@ public struct Expandable<Contents: View, ButtonLabel: View>: View {
         truncatedHeight < fullHeight
     }
 
+    /// Initializer with a binding to control the expanded state externally.
+    public init(isExpanded: Binding<Bool>, @ViewBuilder _ contents: @escaping () -> Contents, @ViewBuilder buttonLabel: @escaping () -> ButtonLabel) {
+        self._isExpandedBinding = isExpanded
+        self.usesBinding = true
+        self.contents = contents
+        self.buttonLabel = buttonLabel
+    }
+
+    /// Initializer that manages its own internal state.
     public init(@ViewBuilder _ contents: @escaping () -> Contents, @ViewBuilder buttonLabel: @escaping () -> ButtonLabel) {
+        self._isExpandedBinding = .constant(false)
+        self.usesBinding = false
         self.contents = contents
         self.buttonLabel = buttonLabel
     }
@@ -150,22 +174,30 @@ extension View {
 }
 
 #Preview {
-    ScrollView {
-        Expandable {
-            Text("Here’s to the crazy ones. The misfits. The rebels. The troublemakers. The round pegs in the square holes. The ones who see things differently. They’re not fond of rules. And they have no respect for the status quo. You can quote them, disagree with them, glorify or vilify them. About the only thing you can’t do is ignore them. Because they change things. They push the human race forward. And while some may see them as the crazy ones, we see genius. Because the people who are crazy enough to think they can change the world, are the ones who do.")
-        } buttonLabel: {
-            Text("more")
-        }
-            .lineLimit(3)
-            .padding()
+    PreviewWrapper()
+}
 
-        Expandable {
-            Text("هذه فقرة نصية طويلة تستخدم لاختبار عرض النصوص في التطبيقات التي تدعم اللغات من اليمين إلى اليسار. من المهم أن يتم التعامل مع الأحرف والمسافات والتنسيقات بشكل صحيح. يجب أن تكون الواجهة قادرة على التعامل مع نصوص متعددة الأسطر بشكل جيد، بما في ذلك الحالات التي يكون فيها النص طويلاً جدًا ويحتاج إلى قطع أو تقليم.")
-        } buttonLabel: {
-            Image(systemName: "ellipsis")
+private struct PreviewWrapper: View {
+    @State private var isExpanded = false
+    
+    var body: some View {
+        ScrollView {
+            Expandable(isExpanded: $isExpanded) {
+                Text("Here's to the crazy ones. The misfits. The rebels. The troublemakers. The round pegs in the square holes. The ones who see things differently. They're not fond of rules. And they have no respect for the status quo. You can quote them, disagree with them, glorify or vilify them. About the only thing you can't do is ignore them. Because they change things. They push the human race forward. And while some may see them as the crazy ones, we see genius. Because the people who are crazy enough to think they can change the world, are the ones who do.")
+            } buttonLabel: {
+                Text("more")
+            }
+			.lineLimit(3)
+			.padding()
+
+            Expandable {
+                Text("هذه فقرة نصية طويلة تستخدم لاختبار عرض النصوص في التطبيقات التي تدعم اللغات من اليمين إلى اليسار. من المهم أن يتم التعامل مع الأحرف والمسافات والتنسيقات بشكل صحيح. يجب أن تكون الواجهة قادرة على التعامل مع نصوص متعددة الأسطر بشكل جيد، بما في ذلك الحالات التي يكون فيها النص طويلاً جدًا ويحتاج إلى قطع أو تقليم.")
+            } buttonLabel: {
+                Image(systemName: "ellipsis")
+            }
+			.lineLimit(3)
+			.padding()
+			.environment(\.layoutDirection, .rightToLeft)
         }
-            .lineLimit(3)
-            .padding()
-            .environment(\.layoutDirection, .rightToLeft)
     }
 }
